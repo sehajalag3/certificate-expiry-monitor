@@ -21,7 +21,8 @@ Branches 2 and 3 both rewrite the same line on purpose, producing a conflict tha
 during review (the resolution keeps both facts):
 
 <!-- merge-conflict-drill -->
-Practice-branch value: sprint handover notes are recorded on the retro board.
+Practice-branch value: sprint handover notes are recorded on the retro board; the review SLA is
+one working day per reviewer.
 
 ## 22.3 Release baseline
 
