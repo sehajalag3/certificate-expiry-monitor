@@ -21,7 +21,7 @@ Branches 2 and 3 both rewrite the same line on purpose, producing a conflict tha
 during review (the resolution keeps both facts):
 
 <!-- merge-conflict-drill -->
-Practice-branch value: (set by branches 2 and 3)
+Practice-branch value: sprint handover notes are recorded on the retro board.
 
 ## 22.3 Release baseline
 
