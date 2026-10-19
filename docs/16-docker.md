@@ -7,6 +7,8 @@
 | `Dockerfile` | multi-stage build: Maven 3.9.9 + JDK 21 -> JRE 21 runtime (non-root, curl, healthcheck) |
 | `.dockerignore` | keeps `target/`, `data/`, docs, git metadata out of the build context |
 | `docker-compose.yml` | one service, published port, named volume, env config, restart policy |
+| `deploy/docker-compose.deploy.yml` | deployment stack: app container + Nginx reverse proxy, image tag via `IMAGE_REF`, proxy port via `HTTP_PORT` |
+| `deploy/nginx/nginx.conf` | Nginx site: proxies to the app on `certificate-monitor:8080`, `X-Forwarded-*` headers, `/nginx-health` self-check |
 | `scripts/deploy-docker.ps1` / `.sh` | build + start + wait for health |
 
 ## 16.2 Image design
