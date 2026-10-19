@@ -11,11 +11,12 @@ Checkout -> Build and unit tests -> Selenium UI journeys -> Package -> Docker im
 
 | Stage | Command | Purpose | Gate |
 |-------|---------|---------|------|
+| Trigger | `pollSCM('H/5 * * * *')` | build on new commits without an inbound webhook | always registered |
 | Checkout | `checkout scm`, `git rev-parse` | source at the right commit | always |
 | Build and unit tests | `./mvnw -B clean test` | compile + 37 unit/integration tests | always; JUnit results published |
 | Selenium UI journeys | `./mvnw -B test -Pui` | 5 headless Chrome journeys | `RUN_UI_TESTS` param; screenshots archived |
 | Package | `./mvnw -B -DskipTests package` | executable jar; `test -f` asserts it exists | always |
-| Docker image | `docker build -t <reg>/<img>:1.0.0-<no> -t <reg>/<img>:latest .` | reproducible runtime | `BUILD_IMAGE` param |
+| Docker image | `where docker`, `docker build -t <reg>/<img>:1.0.0-<no> -t <reg>/<img>:latest .` | reproducible runtime | `BUILD_IMAGE` param; early failure when the CLI is missing |
 | Push image | `docker login/push` | publish for deployment | `PUSH_IMAGE` + credentials |
 | Deploy | `ansible-playbook ... ansible/site.yml` | provision + start on the target host | `DEPLOY_HOST` param |
 
@@ -39,11 +40,11 @@ Details: `docs/17-continuous-deployment.md`, `docs/18-ansible-provisioning.md`.
 
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
-| `RUN_UI_TESTS` | true | run the Selenium stage |
-| `BUILD_IMAGE` | true | build the Docker image |
+| `RUN_UI_TESTS` | false | run the Selenium stage (needs Chrome on the agent) |
+| `BUILD_IMAGE` | false | build the Docker image (needs the Docker CLI on the agent PATH) |
 | `PUSH_IMAGE` | false | push to registry (needs `dockerhub-credentials`) |
 | `REGISTRY` | `docker.io` | registry host |
-| `IMAGE_NAME` | `your-dockerhub-user/certificate-expiry-monitor` | repository |
+| `IMAGE_NAME` | `sehaj0003/certificate-expiry-monitor` | repository |
 | `DEPLOY_HOST` | empty | `user@host` for Ansible; empty = skip deploy |
 
 ## 13.4 Manual deployment (without Jenkins)
@@ -68,8 +69,22 @@ Or plain Docker: `docker compose up -d --build` (see `docs/16-docker.md`).
 
 ## 13.6 Verification status
 
-Locally re-executed (see final validation doc): `clean test`, `test -Pui`, `package`,
+Locally re-executed (see final validation doc): `clean test` (37), `test -Pui` (5), `package`,
 `docker build`, `docker compose config`, container health check.
-Not executable here (no Jenkins): stage orchestration, credential binding, Ansible stage -
-the playbook commands were validated statically and `ansible-playbook --syntax-check` is
-unavailable because Ansible is not installed on this machine.
+
+Executed on the local Jenkins 2.580.1 controller (Windows, `LocalSystem`):
+
+| Build | Stages exercised | Evidence |
+|-------|------------------|----------|
+| #1 | checkout, 37 tests, package | `BUILD SUCCESS`, JAR archived |
+| #2 | + Selenium UI journeys | `Tests run: 5`, JUnit results published, JAR archived |
+| #3 | + Docker image | `Successfully tagged …:1.0.0-3` and `…:latest`, JAR archived |
+
+Push and Deploy stages were skipped (`PUSH_IMAGE=false`, empty `DEPLOY_HOST`), so their
+credential and orchestration wiring is still unverified. Green UI runs write no screenshots;
+the pipeline now checks that `target/selenium-screenshots` exists before archiving, which
+removes the "No artifacts found ... Configuration error?" warning seen in build #2.
+
+Ansible was installed in WSL (Ubuntu 26.04, ansible-core 2.20.1):
+`ansible-playbook --syntax-check ansible/site.yml` passed and a `--check` run of the
+`common` + `app` roles against `localhost` finished with `failed=0`.

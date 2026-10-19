@@ -13,6 +13,13 @@ pipeline {
         disableConcurrentBuilds()
     }
 
+    triggers {
+        // Poll the repository for new commits every ~5 minutes. Polling works
+        // with a controller that is not reachable from the internet; a GitHub
+        // webhook is an alternative once a public Jenkins URL exists.
+        pollSCM('H/5 * * * *')
+    }
+
     parameters {
         booleanParam(
             name: 'RUN_UI_TESTS',
@@ -84,8 +91,14 @@ pipeline {
                 always {
                     junit allowEmptyResults: true,
                           testResults: 'target/surefire-reports/TEST-*ui*.xml'
-                    archiveArtifacts artifacts: 'target/selenium-screenshots/**',
-                                     allowEmptyArchive: true
+                    script {
+                        // Screenshots are only written when a journey fails; avoid the
+                        // "No artifacts found ... Configuration error?" noise on green runs.
+                        if (fileExists('target/selenium-screenshots')) {
+                            archiveArtifacts artifacts: 'target/selenium-screenshots/**',
+                                             allowEmptyArchive: true
+                        }
+                    }
                 }
             }
         }
@@ -104,6 +117,8 @@ pipeline {
                 expression { params.BUILD_IMAGE }
             }
             steps {
+                // Fail with a clear message when the agent has no docker CLI on PATH.
+                bat 'where docker'
                 bat 'docker build -t "%REGISTRY%/%IMAGE_NAME%:%IMAGE_TAG%" -t "%REGISTRY%/%IMAGE_NAME%:latest" .'
             }
         }

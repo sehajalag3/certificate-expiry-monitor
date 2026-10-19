@@ -1,9 +1,10 @@
 # 20. Final validation report
 
-**Date:** 2026-10-19
+**Date:** 2026-10-19 (application validation), 2026-10-20 (CI/CD addendum, section 8)
 **Machine:** Windows 11, Microsoft OpenJDK 21.0.12.1, Git 2.47.1, Docker Desktop (engine 29.6.2),
-Google Chrome 155.0.8059.82 (ChromeDriver 155.0.8059.84 via Selenium Manager), Python 3.13.2.
-**Not installed on this machine:** Maven (Maven Wrapper used instead), Jenkins, Ansible.
+Google Chrome 155.0.8059.82 (ChromeDriver 155.0.8059.84 via Selenium Manager), Python 3.13.2,
+Jenkins 2.580.1 (local Windows service); Ansible-core 2.20.1 inside WSL Ubuntu 26.04.
+**Not installed on this machine:** Maven (Maven Wrapper used instead), native Ansible on Windows.
 
 Every row marked **EXECUTED** below was run in this repository and its result captured.
 
@@ -50,19 +51,22 @@ Test breakdown (default run): 7 calculator + 10 service + 5 repository + 12 Mock
 | YAML parse of `docker-compose.yml`, `ansible/site.yml`, all Ansible role files, `application*.yml` | `10/10 files parsed OK` (Python `yaml.safe_load`) | **EXECUTED - PASS** |
 | PowerShell syntax of the 3 `scripts/*.ps1` | `ParseFile` - 0 errors | **EXECUTED - PASS** |
 | `bash -n` on the 3 `scripts/*.sh` | exit 0 for all | **EXECUTED - PASS** |
-| `Jenkinsfile` | written to use only the commands verified above | **REVIEWED - NOT EXECUTED** (no Jenkins on this machine) |
-| `ansible-playbook --syntax-check` / run | n/a | **NOT EXECUTED** (Ansible not installed; YAML parsed + reviewed instead) |
+| `Jenkinsfile` | written to use only the commands verified above | **EXECUTED in Jenkins build #1** (tests + package) - see section 8 |
+| `ansible-playbook --syntax-check` / run | valid playbook | **EXECUTED in WSL** (`--syntax-check` passed; `--check` run of `common` + `app`: `failed=0`) - see section 8 |
 
 ## 5. Documented-but-unverified items (honest list)
 
-1. **Jenkins end-to-end run** - requires a Jenkins controller/agent (`docs/12-jenkins-setup.md`
-   explains setup). All individual pipeline commands were executed locally.
+1. **Jenkins end-to-end run** - build #1 covered checkout, unit/integration tests and packaging;
+   the Selenium, Docker image, push and deploy stages have not yet run inside Jenkins because
+   their parameters default to `false`. See section 8.
 2. **Ansible playbook against a real server** - requires a provisioned host and Ansible
-   (`docs/18-ansible-provisioning.md`). Files are YAML-valid and statically reviewed.
+   (`docs/18-ansible-provisioning.md`). Syntax check and a localhost check-mode run passed;
+   no remote host exists yet.
 3. **PostgreSQL profile** (`application-postgres.yml`) - driver included, config documented;
    not exercised on this machine (H2 is the verified path).
-4. **Registry push / remote deployment / PR flow** - no remote configured for this repository
-   by design; no remotes or URLs were invented.
+4. **Registry push / remote deployment / PR flow** - a public GitHub remote exists, but no
+   image has been pushed to a registry and no host has been provisioned; the Jenkins
+   credential store is empty.
 5. **Screenshots for documentation** - failure screenshots exist only under
    `target/selenium-screenshots/` (test artifacts); no fabricated UI screenshots are included.
 
@@ -84,4 +88,23 @@ Test breakdown (default run): 7 calculator + 10 service + 5 repository + 12 Mock
 - Artifacts: `target/certificate-expiry-monitor-1.0.0.jar`, Docker image
   `certificate-expiry-monitor:1.0.0`.
 - Docs: 21 documents in `docs/` + README + CONTRIBUTING.
-- Git: repository initialised with a single meaningful initial commit; no remote configured.
+- Git: `main` at `c80bff0` (Windows Jenkins fix on top of the initial import), pushed to
+  `https://github.com/sehajalag3/certificate-expiry-monitor.git`.
+
+## 8. CI/CD addendum - 2026-10-20
+
+| Check | Result | Status |
+|-------|--------|--------|
+| Jenkins controller | 2.580.1 at `http://localhost:8080`, Windows service running as `LocalSystem`, job `Certificate-Expiry-Monitor` (Pipeline script from SCM, `*/main`) | **EXECUTED - PASS** |
+| `.\mvnw.cmd -B test` re-run | `Tests run: 37, Failures: 0, Errors: 0` | **EXECUTED - PASS** |
+| `.\mvnw.cmd -B test -Pui` re-run | `Tests run: 5, Failures: 0, Errors: 0` | **EXECUTED - PASS** |
+| Jenkins build #1 (checkout, test, package) | console log shows `Tests run: 37`, `BUILD SUCCESS`, jar archived | **EXECUTED - PASS** |
+| Jenkins build #2 (+ Selenium) | `Tests run: 5, Failures: 0`; `junitResult.xml` published; jar archived | **EXECUTED - PASS** |
+| Jenkins build #3 (+ Docker) | `Successfully tagged sehaj0003/certificate-expiry-monitor:1.0.0-3` and `:latest`; jar archived | **EXECUTED - PASS** |
+| Empty screenshot archive warning | build #2/#3 logged "No artifacts found ... Configuration error?"; archive step now guarded by `fileExists(...)` | **FIXED (next build will confirm)** |
+| Jenkins credentials | `credentials.xml` absent -> `dockerhub-credentials` and `deploy-ssh-key` do not exist | **MISSING** |
+| GitHub trigger | job `<triggers/>` was empty; repository is public (`git ls-remote` works anonymously); `pollSCM('H/5 * * * *')` added to `Jenkinsfile` | **IMPLEMENTED, not registered yet** |
+| Ansible validation | `--syntax-check site.yml` OK; `--check` on `common` + `app` roles: `failed=0`; docker role fails in check mode because its apt repository is only simulated | **EXECUTED (partial)** |
+| Local deployment/recovery rehearsal | Jenkins image `1.0.0-3` on port 8082 + separate volume: health `UP`, created certificate survived restart, tag swap to `1.0.0` preserved data; container/volume removed | **EXECUTED - PASS** |
+| Remote deployment / rollback | no target host; inventory contains the placeholder `app.example.com` only | **NOT EXECUTED** |
+| Docker Hub push | not attempted - Jenkins credential missing; Hub shows only the older `1.0.0` tag | **BLOCKED** |

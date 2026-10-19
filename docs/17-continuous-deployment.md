@@ -71,6 +71,14 @@ Schema changes in v1 are additive (`ddl-auto: update`), keeping rollbacks safe.
 
 - Commands used by the deploy stage (`package`, `docker build`, health checks) **were executed
   and verified** on this machine.
-- The Jenkins stage wiring and a real Ansible run against a server **were not executed here**
-  (Jenkins/Ansible not installed, no remote server) - the playbooks are provided, YAML-parsed
-  and statically reviewed; see `docs/20-final-validation.md`.
+- Jenkins builds #1-#3 are green; build #3 produced the deployable tag `1.0.0-3` (+ `latest`).
+- The playbooks were syntax-checked (`ansible-playbook --syntax-check ansible/site.yml`) and
+  the `common` + `app` roles ran in `--check` mode against localhost under WSL
+  (Ubuntu 26.04, ansible-core 2.20.1) with `failed=0`.
+- **Deployment/recovery rehearsal (2026-10-20, local Docker):** the Jenkins-built image was
+  started on port 8082 with a separate volume, `/actuator/health` returned `UP`, a certificate
+  created through the UI survived a container restart, and swapping to the older `1.0.0` tag on
+  the same volume preserved the data (the documented rollback path). The disposable container
+  and volume were removed afterwards.
+- A **real deployment to a remote server** has not been performed: the inventory contains only
+  the placeholder `app.example.com`.

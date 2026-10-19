@@ -29,5 +29,6 @@ mapped to the assignment tasks.
 
 **Verification note:** every command and number quoted in these documents was executed on the
 development machine (Windows 11, Java 21, Docker Desktop) unless a document explicitly says
-"not executed here". Jenkins and Ansible are documented but could not be executed locally -
-see [20-final-validation.md](20-final-validation.md) for the exact status table.
+"not executed here". Jenkins 2.580.1 is installed locally (builds #1-#3 green) and Ansible was
+validated from WSL (syntax check + localhost check mode); see
+[20-final-validation.md](20-final-validation.md) for the exact status table.
