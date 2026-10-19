@@ -81,6 +81,8 @@ Executed on the local Jenkins 2.580.1 controller (Windows, `LocalSystem`):
 | #3 | + Docker image | `Successfully tagged …:1.0.0-3` and `…:latest`, JAR archived |
 | #4 | manual `Build with Parameters` | `BUILD SUCCESS`; Push/Deploy skipped, so `pollSCM` registered and the job now saves an `SCMTrigger` |
 | #5, #6 | + Push image | `docker login … unauthorized: incorrect username or password` - see the root cause below |
+| #7 | SCM-triggered (push of the fix) | `BUILD SUCCESS`, 37 tests; image/push skipped because the job still held the old parameter defaults |
+| #8 | SCM-triggered | `Successfully tagged …:1.0.0-8` and `…:latest`; `Login Succeeded` + `DIAG: docker login succeeded`; both tags pushed (`digest sha256:ed267dca…`); `docker logout` ran |
 
 Green UI runs write no screenshots; the pipeline checks that `target/selenium-screenshots`
 exists before archiving, which removes the "No artifacts found ... Configuration error?"
