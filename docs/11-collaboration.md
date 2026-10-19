@@ -71,3 +71,11 @@ diff first.
 - Bug -> bug report template, reproduction steps, Java version, run mode (jar/Maven/Docker).
 - Feature -> feature request template, note DB/route/UI impact.
 - Every escaped bug gets a regression test in the same PR that fixes it.
+
+## 11.7 Practice branches (evidence)
+
+To keep the workflow healthy the team rehearses it explicitly. Every feature branch is created
+from `main`, reviewed against §11.3 and merged back with `--no-ff`; one branch pair deliberately
+edits the same lines to rehearse conflict resolution (`.gitattributes`/small docs diffs keep
+this cheap). The running record lives in
+[`22-collaboration-log.md`](22-collaboration-log.md).

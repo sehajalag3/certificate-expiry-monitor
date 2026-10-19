@@ -61,9 +61,17 @@ git push origin v1.0.0        # when a remote exists
 
 The Jenkins pipeline builds `1.0.0-${BUILD_NUMBER}` images; tags mark human milestones.
 
-## 9.6 Working without a remote (this project)
+## 9.6 Remote and collaboration (this project)
 
-The repository is local-only: there is no configured remote, so no `git push`/PR is performed.
-Collaboration flows described in [`11-collaboration.md`](11-collaboration.md) apply once the
-repo is published (e.g. to GitHub) - the same branch names, PR template and review checklist
-are already provided under `.github/`.
+The repository is published on GitHub and configured as `origin`:
+
+```
+https://github.com/sehajalag3/certificate-expiry-monitor.git
+```
+
+Short-lived feature branches are created from `main`, pushed, and merged back with `--no-ff`
+so the branch context is preserved as a merge commit; release milestones are annotated tags
+(`v1.0.0`). The branch names, PR template (`.github/PULL_REQUEST_TEMPLATE.md`) and review
+checklist in [`11-collaboration.md`](11-collaboration.md) are exercised for every change; a
+running log of the exercises is kept in
+[`22-collaboration-log.md`](22-collaboration-log.md).

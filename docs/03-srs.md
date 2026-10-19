@@ -24,6 +24,62 @@ renewal, authentication, alert delivery channels.
 - **QA / security reviewers** - audit inventory, check expiry across environments.
 - **Administrators** - configure threshold, seed/reset demo data, deploy the app.
 
+### 3.1 Use-case diagram
+
+```mermaid
+flowchart LR
+  Ops(["Ops / platform engineer"])
+  QA(["QA / security reviewer"])
+  Admin(["Administrator"])
+  CI(["Jenkins (CI/CD actor)"])
+
+  UC1(("View dashboard"))
+  UC2(("View exceptions"))
+  UC3(("Search / filter / sort / paginate list"))
+  UC4(("View certificate detail"))
+  UC5(("Add certificate"))
+  UC6(("Edit certificate"))
+  UC7(("Delete certificate"))
+  UC8(("Reset demo data"))
+  UC9(("Configure warning threshold"))
+  UC10(("Check health"))
+
+  Ops --> UC1
+  Ops --> UC2
+  Ops --> UC3
+  Ops --> UC4
+  Ops --> UC5
+  Ops --> UC6
+  Ops --> UC7
+
+  QA --> UC2
+  QA --> UC3
+  QA --> UC4
+
+  Admin --> UC8
+  Admin --> UC9
+
+  CI --> UC10
+
+  UC1 -. "include" .-> UC2
+  UC5 -. "extend" .-> UC4
+  UC6 -. "extend" .-> UC4
+  UC7 -. "extend" .-> UC4
+```
+
+| Use case | Actor(s) | Backing requirement(s) |
+|----------|----------|------------------------|
+| UC1 View dashboard | Ops | FR3 |
+| UC2 View exceptions | Ops, QA | FR12 |
+| UC3 Search / filter / sort / paginate | Ops, QA | FR4, FR5, FR6, FR7 |
+| UC4 View certificate detail | Ops, QA | FR11 |
+| UC5 Add certificate | Ops | FR8 |
+| UC6 Edit certificate | Ops | FR9 |
+| UC7 Delete certificate | Ops | FR10 |
+| UC8 Reset demo data | Admin | FR13 |
+| UC9 Configure warning threshold | Admin | FR2 |
+| UC10 Check health | Jenkins | FR15 |
+
 ## 4. Functional requirements
 
 | ID | Requirement | Implemented in |
