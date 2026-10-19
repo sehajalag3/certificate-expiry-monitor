@@ -51,6 +51,16 @@ pipeline {
             defaultValue: '',
             description: 'SSH user@host; Linux agent required for Ansible'
         )
+        booleanParam(
+            name: 'DEPLOY_CONTAINER',
+            defaultValue: false,
+            description: 'Deploy a fresh app container behind Nginx on the agent (continuous deployment)'
+        )
+        string(
+            name: 'DEPLOY_PORT',
+            defaultValue: '8888',
+            description: 'Host port exposed by the Nginx front door for the deployed container'
+        )
     }
 
     environment {
@@ -156,6 +166,26 @@ pipeline {
                         powershell -NoProfile -ExecutionPolicy Bypass -Command "docker logout $env:REGISTRY"
                     '''
                 }
+            }
+        }
+
+        stage('Deploy Container') {
+            when {
+                expression { params.BUILD_IMAGE && params.DEPLOY_CONTAINER }
+            }
+            steps {
+                // Continuous deployment: replace the running container with the
+                // freshly built image, front it with Nginx (deploy/nginx/nginx.conf)
+                // and gate success on the health endpoint through the proxy.
+                bat '''
+                    @echo off
+                    where docker || exit /b 1
+                    set "IMAGE_REF=%REGISTRY%/%IMAGE_NAME%:%IMAGE_TAG%"
+                    set "HTTP_PORT=%DEPLOY_PORT%"
+                    docker compose -f deploy/docker-compose.deploy.yml up -d --force-recreate || exit /b 1
+                    powershell -NoProfile -ExecutionPolicy Bypass -Command "$u='http://localhost:%DEPLOY_PORT%/actuator/health'; for($i=0;$i -lt 30;$i++){ try{ $r=Invoke-WebRequest -UseBasicParsing $u -TimeoutSec 3; if($r.StatusCode -eq 200 -and $r.Content -match 'UP'){ Write-Host 'DIAG: deployed container healthy behind Nginx'; exit 0 } }catch{}; Start-Sleep -Seconds 2 }; Write-Host 'DIAG: health check failed'; exit 1"
+                    if errorlevel 1 exit /b 1
+                '''
             }
         }
 

@@ -18,10 +18,16 @@ deployment moves a host to a specific tag. Rollback = deploy an older tag.
 3. **Artifact:** jar existence asserted after packaging.
 4. **Image:** `docker build` with build-number and `latest` tags.
 5. **Publish:** optional, only when `PUSH_IMAGE=true` and credentials exist.
-6. **Deploy:** optional, only when `DEPLOY_HOST` is set - runs `ansible/site.yml`.
+6. **Deploy Container:** optional, only when `BUILD_IMAGE=true` and `DEPLOY_CONTAINER=true` -
+   `docker compose -f deploy/docker-compose.deploy.yml up -d --force-recreate` (fresh container
+   from the just-built image, fronted by Nginx) and a health gate through the proxy on
+   `DEPLOY_PORT` (default 8888).
+7. **Deploy with Ansible:** optional, only when `DEPLOY_HOST` is set - runs `ansible/site.yml`
+   (remote Linux host).
 
-Promotion model for v1: **manual** (build parameters), i.e. continuous delivery. Enabling a
-`when { branch 'main' }` deploy stage turns it into full continuous deployment.
+Promotion model for v1: **manual** (build parameters), i.e. continuous delivery. Enabling
+`DEPLOY_CONTAINER` on the `main` build turns the container path into full continuous
+deployment; setting `DEPLOY_HOST` enables the remote (Ansible) path.
 
 ## 17.3 Deployment mechanics
 
@@ -82,3 +88,26 @@ Schema changes in v1 are additive (`ddl-auto: update`), keeping rollbacks safe.
   and volume were removed afterwards.
 - A **real deployment to a remote server** has not been performed: the inventory contains only
   the placeholder `app.example.com`.
+
+## 17.8 Container deployment behind Nginx (verified, this machine)
+
+The "server" for the container path is an Nginx reverse proxy in front of the app container,
+described by `deploy/docker-compose.deploy.yml` + `deploy/nginx/nginx.conf`.
+
+```
+Browser -> Nginx (host :DEPLOY_PORT) -> certificate-monitor container (:8080, not published) -> H2 volume
+```
+
+Verified end to end on 2026-10-20:
+
+| Check | Command | Result |
+|-------|---------|--------|
+| Compose validity | `docker compose -f deploy/docker-compose.deploy.yml config -q` | valid |
+| Start fresh container + proxy | `IMAGE_REF=sehaj0003/certificate-expiry-monitor:1.0.0-8 HTTP_PORT=8888 docker compose -f deploy/docker-compose.deploy.yml up -d` | app container `healthy`, Nginx `Up 0.0.0.0:8888->80` |
+| Health through proxy | `GET http://localhost:8888/actuator/health` | `{"status":"UP","groups":["liveness","readiness"]}` |
+| Proxy self-check | `GET http://localhost:8888/nginx-health` | `ok` |
+| Dashboard through proxy | `GET http://localhost:8888/` | `200`, title `Dashboard \| Certificate Expiry Monitor` |
+| Visual evidence | headless Chrome screenshot | `docs/screenshots/deployed-dashboard.png` |
+
+To redeploy/rollback, change `IMAGE_REF` to another immutable tag (e.g. `1.0.0-3`) and re-run
+`up -d --force-recreate`; the named volume `deploy_certificate-data-deploy` keeps the data.

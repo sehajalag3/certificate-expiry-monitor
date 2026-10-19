@@ -1,0 +1,28 @@
+services:
+  certificate-monitor:
+    image: ${IMAGE_REF:-sehaj0003/certificate-expiry-monitor:latest}
+    container_name: certmon-deploy-app
+    expose:
+      - "8080"
+    environment:
+      SERVER_PORT: "8080"
+      WARNING_THRESHOLD_DAYS: "30"
+      DEMO_DATA_ENABLED: "true"
+      THYMELEAF_CACHE: "true"
+    volumes:
+      - certificate-data-deploy:/app/data
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: certmon-deploy-nginx
+    depends_on:
+      - certificate-monitor
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+
+volumes:
+  certificate-data-deploy:
