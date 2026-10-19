@@ -1,0 +1,18 @@
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/certmonitor}
+    username: ${POSTGRES_USER:certmonitor}
+    password: ${POSTGRES_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  h2:
+    console:
+      enabled: false
+
+# Activate with: SPRING_PROFILES_ACTIVE=postgres (and POSTGRES_* environment variables).

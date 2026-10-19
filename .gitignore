@@ -1,0 +1,34 @@
+# Build output
+target/
+*.class
+*.jar
+!mvnw/wrapper/*.jar
+
+# Runtime data
+data/
+*.mv.db
+*.trace.db
+*.db
+
+# Logs and test artifacts
+*.log
+logs/
+selenium-screenshots/
+
+# IDE / editor
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.springBeans
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local environment overrides
+.env
+*.local

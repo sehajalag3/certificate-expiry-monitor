@@ -1,0 +1,20 @@
+services:
+  certificate-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: certificate-expiry-monitor:1.0.0
+    container_name: certificate-expiry-monitor
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_PORT: "8080"
+      WARNING_THRESHOLD_DAYS: "30"
+      DEMO_DATA_ENABLED: "true"
+      THYMELEAF_CACHE: "true"
+    volumes:
+      - certificate-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  certificate-data:

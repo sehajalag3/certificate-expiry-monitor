@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Register, track and monitor certificate expiry dates.">
+    <title th:text="${title} + ' | Certificate Expiry Monitor'">Certificate Expiry Monitor</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+
+<nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark app-navbar" aria-label="Main navigation">
+    <div class="container-xl">
+        <a class="navbar-brand d-flex align-items-center gap-2" th:href="@{/}">
+            <span class="brand-mark" aria-hidden="true">C</span>
+            <span class="brand-text">Certificate Expiry Monitor</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeNav == 'dashboard'} ? 'active'"
+                       th:href="@{/}" data-testid="nav-dashboard">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeNav == 'certificates'} ? 'active'"
+                       th:href="@{/certificates}" data-testid="nav-certificates">Certificates</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeNav == 'exceptions'} ? 'active'"
+                       th:href="@{/exceptions}" data-testid="nav-exceptions">Expiry exceptions</a>
+                </li>
+                <li class="nav-item ms-lg-2">
+                    <a class="btn btn-light btn-sm px-3" th:href="@{/certificates/new}" data-testid="nav-add">Add certificate</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div th:fragment="flash" class="container-xl pt-3">
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="status"
+         data-testid="flash-success">
+        <span th:text="${successMessage}">Saved.</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert"
+         data-testid="flash-error">
+        <span th:text="${errorMessage}">Something went wrong.</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
+<span th:fragment="statusBadge(status)"
+      class="badge rounded-pill status-badge"
+      th:classappend="${status.name() == 'VALID'} ? 'text-bg-success' : (${status.name() == 'EXPIRING_SOON'} ? 'text-bg-warning' : 'text-bg-danger')"
+      th:text="${status.label}">Valid</span>
+
+<span th:fragment="daysLeft(days)">
+    <span th:if="${days < 0}" class="text-danger fw-semibold" th:text="|${-days} day(s) overdue|">5 day(s) overdue</span>
+    <span th:if="${days == 0}" class="text-warning-emphasis fw-semibold">Expires today</span>
+    <span th:if="${days > 0}" class="text-muted" th:text="|in ${days} day(s)|">in 12 day(s)</span>
+</span>
+
+<footer th:fragment="footer" class="app-footer">
+    <div class="container-xl d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 py-3">
+        <span class="text-muted">Certificate Expiry Monitor <span class="text-body-tertiary">v1.0.0</span></span>
+        <span class="text-muted">
+            Warning threshold: <strong th:text="${warningThresholdDays} + ' days'">30 days</strong>
+            <span aria-hidden="true">&middot;</span>
+            <a th:href="@{/actuator/health}" target="_blank" rel="noopener">Health endpoint</a>
+            <span aria-hidden="true">&middot;</span>
+            <a th:href="@{/certificates/new}">Register a certificate</a>
+        </span>
+    </div>
+</footer>
+
+<script th:fragment="scripts" th:src="@{/vendor/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

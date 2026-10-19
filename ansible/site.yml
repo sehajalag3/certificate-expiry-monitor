@@ -1,0 +1,11 @@
+---
+# Provisions and deploys the Certificate Expiry Monitor.
+#   Dry run:  ansible-playbook site.yml --check
+#   Apply:    ansible-playbook site.yml -e deploy=true
+- name: Certificate Expiry Monitor provision and deploy
+  hosts: app_server
+  become: true
+  roles:
+    - common
+    - docker
+    - app

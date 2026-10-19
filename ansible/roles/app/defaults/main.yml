@@ -1,0 +1,8 @@
+---
+app_group: certmonitor
+app_user_name: certmonitor
+app_home: /opt/certificate-expiry-monitor
+app_port: 8080
+app_image: certificate-expiry-monitor:1.0.0
+warning_threshold_days: 30
+demo_data_enabled: true

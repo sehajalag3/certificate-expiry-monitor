@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Certificate exceptions')}"></head>
+<body>
+<a class="visually-hidden-focusable skip-link" href="#main">Skip to content</a>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<main id="main" class="container-xl py-4">
+    <div class="mb-4">
+        <p class="text-uppercase text-muted small fw-semibold mb-1">Attention required</p>
+        <h1 class="h2 mb-1">Expiry exceptions</h1>
+        <p class="text-muted mb-0">
+            Every certificate that is expired or expires within the
+            <strong th:text="${warningThresholdDays}">30</strong>-day warning window, ordered by expiry date.
+        </p>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card summary-card summary-card-expired">
+                <div class="card-body">
+                    <p class="summary-label">Expired</p>
+                    <p class="summary-value mb-0" th:text="${counts.expired}" data-testid="exceptions-expired-count">2</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card summary-card summary-card-soon">
+                <div class="card-body">
+                    <p class="summary-label">Expiring soon</p>
+                    <p class="summary-value mb-0" th:text="${counts.expiringSoon}" data-testid="exceptions-soon-count">4</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 d-flex align-items-center">
+            <a class="btn btn-outline-secondary" th:href="@{/certificates}">Back to all certificates</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" data-testid="exceptions-table">
+                <thead>
+                <tr>
+                    <th scope="col">Certificate</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Owner</th>
+                    <th scope="col">Expiry</th>
+                    <th scope="col">Remaining</th>
+                    <th scope="col">Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="cert : ${alerts}" data-testid="exception-row">
+                    <td>
+                        <a class="fw-semibold text-decoration-none"
+                           th:href="@{/certificates/{id}(id=${cert.id})}" th:text="${cert.name}">Certificate</a>
+                        <div class="small text-muted" th:text="${cert.hostname}">host.example.com</div>
+                    </td>
+                    <td th:text="${cert.typeLabel}">TLS/SSL</td>
+                    <td th:text="${cert.ownerTeam}">Platform</td>
+                    <td th:text="${cert.expiryDate}">2026-01-01</td>
+                    <td>
+                        <span th:replace="~{fragments/layout :: daysLeft(${cert.daysRemaining})}"></span>
+                    </td>
+                    <td>
+                        <span th:replace="~{fragments/layout :: statusBadge(${cert.status})}"></span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(alerts)}">
+                    <td colspan="6">
+                        <div class="empty-state text-center py-5" data-testid="exceptions-empty">
+                            <p class="fw-semibold mb-1">No expiring or expired certificates</p>
+                            <p class="text-muted mb-0">Everything is outside the warning window. Nice work.</p>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

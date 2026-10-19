@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Delete certificate')}"></head>
+<body>
+<a class="visually-hidden-focusable skip-link" href="#main">Skip to content</a>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<main id="main" class="container-xl py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card border-danger">
+                <div class="card-header bg-danger-subtle text-danger-emphasis">
+                    <h1 class="h4 mb-0">Delete certificate</h1>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">You are about to permanently delete this certificate record:</p>
+                    <dl class="row detail-list mb-4">
+                        <dt class="col-sm-4">Name</dt>
+                        <dd class="col-sm-8" th:text="${certificate.name}" data-testid="delete-cert-name">Corporate Website</dd>
+                        <dt class="col-sm-4">Hostname</dt>
+                        <dd class="col-sm-8"><code th:text="${certificate.hostname}">www.example.com</code></dd>
+                        <dt class="col-sm-4">Expiry</dt>
+                        <dd class="col-sm-8" th:text="${certificate.expiryDate}">2026-01-01</dd>
+                    </dl>
+                    <p class="text-muted small">This removes the record from dashboards, alerts and search results. The action cannot be undone.</p>
+                    <form th:action="@{/certificates/{id}/delete(id=${certificate.id})}" method="post"
+                          class="d-flex flex-wrap gap-2 justify-content-end">
+                        <a class="btn btn-outline-secondary" th:href="@{/certificates/{id}(id=${certificate.id})}"
+                           data-testid="btn-cancel-delete">Cancel</a>
+                        <button type="submit" class="btn btn-danger" data-testid="btn-confirm-delete">Delete certificate</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

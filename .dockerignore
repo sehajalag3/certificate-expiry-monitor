@@ -1,0 +1,15 @@
+target/
+data/
+.git/
+.github/
+.idea/
+.vscode/
+*.iml
+*.log
+docs/
+*.md
+docker-compose*.yml
+Jenkinsfile
+ansible/
+scripts/
+selenium-screenshots/

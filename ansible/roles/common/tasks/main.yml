@@ -1,0 +1,38 @@
+---
+# Base packages and the unprivileged user that runs the application.
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - unzip
+      - openjdk-21-jdk-headless
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create application group
+  ansible.builtin.group:
+    name: "{{ app_group }}"
+    system: true
+
+- name: Create application user
+  ansible.builtin.user:
+    name: "{{ app_user_name }}"
+    group: "{{ app_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Create application directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_user_name }}"
+    group: "{{ app_group }}"
+    mode: "0755"
+  loop:
+    - "{{ app_home }}"
+    - "{{ app_home }}/data"
+    - "{{ app_home }}/logs"

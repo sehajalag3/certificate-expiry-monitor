@@ -1,0 +1,48 @@
+---
+# Deploys the container image and runs it under systemd.
+- name: Create application directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_user_name }}"
+    group: "{{ app_group }}"
+    mode: "0755"
+  loop:
+    - "{{ app_home }}"
+    - "{{ app_home }}/data"
+    - "{{ app_home }}/logs"
+
+- name: Write application environment file
+  ansible.builtin.template:
+    src: app.env.j2
+    dest: "{{ app_home }}/app.env"
+    owner: "{{ app_user_name }}"
+    group: "{{ app_group }}"
+    mode: "0640"
+
+- name: Install systemd unit for the application
+  ansible.builtin.template:
+    src: certificate-monitor.service.j2
+    dest: /etc/systemd/system/certificate-monitor.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Start the application
+  when: deploy | default(false) | bool
+  ansible.builtin.systemd:
+    name: certificate-monitor
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for the health endpoint
+  when: deploy | default(false) | bool
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ app_port }}/actuator/health"
+    status_code: 200
+  register: health
+  retries: 20
+  delay: 5
+  until: health.status == 200

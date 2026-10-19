@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Certificates')}"></head>
+<body>
+<a class="visually-hidden-focusable skip-link" href="#main">Skip to content</a>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<main id="main" class="container-xl py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+        <div>
+            <p class="text-uppercase text-muted small fw-semibold mb-1">Inventory</p>
+            <h1 class="h2 mb-1">Certificates</h1>
+            <p class="text-muted mb-0" th:text="|${certificates.totalElements} record(s) match the current view.|">
+                10 records match the current view.
+            </p>
+        </div>
+        <a class="btn btn-primary" th:href="@{/certificates/new}" data-testid="list-add">Add certificate</a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" th:action="@{/certificates}" class="row g-3 align-items-end"
+                  data-testid="search-form" role="search">
+                <div class="col-12 col-lg-4">
+                    <label class="form-label small fw-semibold" for="q">Search</label>
+                    <input type="search" class="form-control" id="q" name="q" th:value="${q}"
+                           placeholder="Name, hostname, issuer or owner" data-testid="search-input">
+                </div>
+                <div class="col-6 col-md-3 col-lg-2">
+                    <label class="form-label small fw-semibold" for="status">Status</label>
+                    <select class="form-select" id="status" name="status" data-testid="filter-status">
+                        <option value="">All statuses</option>
+                        <option th:each="s : ${statuses}" th:value="${s.name()}"
+                                th:selected="${statusFilter == s.name()}" th:text="${s.label}">Valid</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3 col-lg-2">
+                    <label class="form-label small fw-semibold" for="type">Type</label>
+                    <select class="form-select" id="type" name="type" data-testid="filter-type">
+                        <option value="">All types</option>
+                        <option th:each="t : ${types}" th:value="${t.name()}"
+                                th:selected="${typeFilter == t.name()}" th:text="${t.label}">TLS/SSL</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3 col-lg-2">
+                    <label class="form-label small fw-semibold" for="environment">Environment</label>
+                    <select class="form-select" id="environment" name="environment" data-testid="filter-environment">
+                        <option value="">All environments</option>
+                        <option th:each="e : ${environments}" th:value="${e.name()}"
+                                th:selected="${environmentFilter == e.name()}" th:text="${e.label}">Production</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3 col-lg-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1" data-testid="search-submit">Search</button>
+                    <a class="btn btn-outline-secondary" th:href="@{/certificates}" data-testid="search-clear">Clear</a>
+                </div>
+                <input type="hidden" name="sort" th:value="${sort}">
+                <input type="hidden" name="direction" th:value="${direction}">
+                <input type="hidden" name="size" th:value="${size}">
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" data-testid="cert-table">
+                <thead>
+                <tr>
+                    <th scope="col">
+                        <a class="sort-link" th:href="@{/certificates(q=${q},status=${statusFilter},type=${typeFilter},environment=${environmentFilter},size=${size},sort='name',direction=${(sort == 'name' and direction == 'asc') ? 'desc' : 'asc'})}">
+                            Name <span th:if="${sort == 'name'}" th:text="${direction == 'asc' ? '↑' : '↓'}"></span>
+                        </a>
+                    </th>
+                    <th scope="col">
+                        <a class="sort-link" th:href="@{/certificates(q=${q},status=${statusFilter},type=${typeFilter},environment=${environmentFilter},size=${size},sort='type',direction=${(sort == 'type' and direction == 'asc') ? 'desc' : 'asc'})}">
+                            Type <span th:if="${sort == 'type'}" th:text="${direction == 'asc' ? '↑' : '↓'}"></span>
+                        </a>
+                    </th>
+                    <th scope="col">
+                        <a class="sort-link" th:href="@{/certificates(q=${q},status=${statusFilter},type=${typeFilter},environment=${environmentFilter},size=${size},sort='environment',direction=${(sort == 'environment' and direction == 'asc') ? 'desc' : 'asc'})}">
+                            Environment <span th:if="${sort == 'environment'}" th:text="${direction == 'asc' ? '↑' : '↓'}"></span>
+                        </a>
+                    </th>
+                    <th scope="col">
+                        <a class="sort-link" th:href="@{/certificates(q=${q},status=${statusFilter},type=${typeFilter},environment=${environmentFilter},size=${size},sort='ownerTeam',direction=${(sort == 'ownerTeam' and direction == 'asc') ? 'desc' : 'asc'})}">
+                            Owner / team <span th:if="${sort == 'ownerTeam'}" th:text="${direction == 'asc' ? '↑' : '↓'}"></span>
+                        </a>
+                    </th>
+                    <th scope="col">
+                        <a class="sort-link" th:href="@{/certificates(q=${q},status=${statusFilter},type=${typeFilter},environment=${environmentFilter},size=${size},sort='issuer',direction=${(sort == 'issuer' and direction == 'asc') ? 'desc' : 'asc'})}">
+                            Issuer <span th:if="${sort == 'issuer'}" th:text="${direction == 'asc' ? '↑' : '↓'}"></span>
+                        </a>
+                    </th>
+                    <th scope="col">
+                        <a class="sort-link" th:href="@{/certificates(q=${q},status=${statusFilter},type=${typeFilter},environment=${environmentFilter},size=${size},sort='expiryDate',direction=${(sort == 'expiryDate' and direction == 'asc') ? 'desc' : 'asc'})}">
+                            Expiry <span th:if="${sort == 'expiryDate'}" th:text="${direction == 'asc' ? '↑' : '↓'}"></span>
+                        </a>
+                    </th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="cert : ${certificates.content}" data-testid="cert-row">
+                    <td>
+                        <a class="fw-semibold text-decoration-none"
+                           th:href="@{/certificates/{id}(id=${cert.id})}" th:text="${cert.name}"
+                           data-testid="cert-name">Certificate</a>
+                        <div class="small text-muted" th:text="${cert.hostname}">host.example.com</div>
+                    </td>
+                    <td th:text="${cert.typeLabel}">TLS/SSL</td>
+                    <td><span class="badge env-badge" th:text="${cert.environmentLabel}">Production</span></td>
+                    <td th:text="${cert.ownerTeam}">Platform</td>
+                    <td th:text="${cert.issuer != null ? cert.issuer : '—'}">Let's Encrypt</td>
+                    <td>
+                        <div th:text="${cert.expiryDate}">2026-01-01</div>
+                        <span th:replace="~{fragments/layout :: daysLeft(${cert.daysRemaining})}"></span>
+                    </td>
+                    <td>
+                        <span th:replace="~{fragments/layout :: statusBadge(${cert.status})}"></span>
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <a class="btn btn-sm btn-outline-secondary"
+                           th:href="@{/certificates/{id}/edit(id=${cert.id})}"
+                           th:attr="aria-label=|Edit ${cert.name}|" data-testid="row-edit">Edit</a>
+                        <a class="btn btn-sm btn-outline-danger"
+                           th:href="@{/certificates/{id}/delete(id=${cert.id})}"
+                           th:attr="aria-label=|Delete ${cert.name}|" data-testid="row-delete">Delete</a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(certificates.content)}">
+                    <td colspan="8">
+                        <div class="empty-state text-center py-5" data-testid="empty-state">
+                            <p class="fw-semibold mb-1"
+                               th:text="${hasFilters ? 'No certificates match these filters' : 'No certificates registered yet'}">
+                                No certificates registered yet
+                            </p>
+                            <p class="text-muted mb-3"
+                               th:text="${hasFilters ? 'Try a different search term or clear the filters.' : 'Add your first certificate to start monitoring expiry dates.'}">
+                                Add your first certificate to start monitoring expiry dates.
+                            </p>
+                            <a th:if="${hasFilters}" class="btn btn-outline-secondary btn-sm" th:href="@{/certificates}">Clear filters</a>
+                            <a th:unless="${hasFilters}" class="btn btn-primary btn-sm" th:href="@{/certificates/new}">Add certificate</a>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2"
+             th:if="${certificates.totalElements > 0}">
+            <div class="small text-muted">
+                Page <span th:text="${certificates.number + 1}">1</span> of
+                <span th:text="${certificates.totalPages}">1</span>
+                <span aria-hidden="true">&middot;</span>
+                <span th:text="${certificates.totalElements}">10</span> certificates
+            </div>
+            <nav th:if="${certificates.totalPages > 1}" aria-label="Certificate pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" th:classappend="${certificates.first} ? 'disabled'">
+                        <a class="page-link"
+                           th:href="@{/certificates(q=${q},status=${statusFilter},type=${typeFilter},environment=${environmentFilter},size=${size},sort=${sort},direction=${direction},page=${certificates.number - 1})}"
+                           aria-label="Previous page" data-testid="page-prev">Previous</a>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(0, certificates.totalPages - 1)}"
+                        th:classappend="${i == certificates.number} ? 'active'">
+                        <a class="page-link"
+                           th:href="@{/certificates(q=${q},status=${statusFilter},type=${typeFilter},environment=${environmentFilter},size=${size},sort=${sort},direction=${direction},page=${i})}"
+                           th:text="${i + 1}"
+                           th:attr="aria-label=|Page ${i + 1}|,aria-current=${i == certificates.number ? 'page' : null}">1</a>
+                    </li>
+                    <li class="page-item" th:classappend="${certificates.last} ? 'disabled'">
+                        <a class="page-link"
+                           th:href="@{/certificates(q=${q},status=${statusFilter},type=${typeFilter},environment=${environmentFilter},size=${size},sort=${sort},direction=${direction},page=${certificates.number + 1})}"
+                           aria-label="Next page" data-testid="page-next">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

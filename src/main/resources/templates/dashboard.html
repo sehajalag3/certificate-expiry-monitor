@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Dashboard')}"></head>
+<body>
+<a class="visually-hidden-focusable skip-link" href="#main">Skip to content</a>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<main id="main" class="container-xl py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+        <div>
+            <p class="text-uppercase text-muted small fw-semibold mb-1">Overview</p>
+            <h1 class="h2 mb-1">Certificate health</h1>
+            <p class="text-muted mb-0">
+                Tracking expiry for every registered certificate with a
+                <strong th:text="${warningThresholdDays}">30</strong>-day warning window.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary" th:href="@{/certificates/new}" data-testid="dashboard-add">Add certificate</a>
+            <form th:if="${demoEnabled}" th:action="@{/demo/reset}" method="post"
+                  onsubmit="return confirm('Replace all certificate records with the demo seed data?');">
+                <button type="submit" class="btn btn-outline-secondary" data-testid="btn-reset-demo">Reset demo data</button>
+            </form>
+        </div>
+    </div>
+
+    <div th:if="${counts.expired > 0}" class="alert alert-danger d-flex flex-wrap align-items-center gap-2" role="alert"
+         data-testid="expired-alert">
+        <strong th:text="${counts.expired}">2</strong>
+        <span th:text="${counts.expired == 1 ? 'certificate has' : 'certificates have'}">certificates have</span>
+        <span>expired and need attention.</span>
+        <a class="alert-link ms-auto" th:href="@{/certificates(status='EXPIRED')}">Review expired certificates</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-xl-3">
+            <a class="card summary-card h-100 text-decoration-none" th:href="@{/certificates}" data-testid="card-total">
+                <div class="card-body">
+                    <p class="summary-label">Total certificates</p>
+                    <p class="summary-value" th:text="${counts.total}" data-testid="card-total-value">10</p>
+                    <p class="summary-hint">All tracked records</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-xl-3">
+            <a class="card summary-card summary-card-valid h-100 text-decoration-none"
+               th:href="@{/certificates(status='VALID')}" data-testid="card-valid">
+                <div class="card-body">
+                    <p class="summary-label">Valid</p>
+                    <p class="summary-value" th:text="${counts.valid}" data-testid="card-valid-value">4</p>
+                    <p class="summary-hint">Outside the warning window</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-xl-3">
+            <a class="card summary-card summary-card-soon h-100 text-decoration-none"
+               th:href="@{/certificates(status='EXPIRING_SOON')}" data-testid="card-expiring">
+                <div class="card-body">
+                    <p class="summary-label">Expiring soon</p>
+                    <p class="summary-value" th:text="${counts.expiringSoon}" data-testid="card-expiring-value">4</p>
+                    <p class="summary-hint" th:text="|Within ${warningThresholdDays} days|">Within 30 days</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-xl-3">
+            <a class="card summary-card summary-card-expired h-100 text-decoration-none"
+               th:href="@{/certificates(status='EXPIRED')}" data-testid="card-expired">
+                <div class="card-body">
+                    <p class="summary-label">Expired</p>
+                    <p class="summary-value" th:text="${counts.expired}" data-testid="card-expired-value">2</p>
+                    <p class="summary-hint">Past the expiry date</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0">Expiry alerts</h2>
+                    <a class="small" th:href="@{/exceptions}">Open exception view</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" data-testid="alerts-table">
+                        <thead>
+                        <tr>
+                            <th scope="col">Certificate</th>
+                            <th scope="col">Expiry</th>
+                            <th scope="col">Remaining</th>
+                            <th scope="col">Status</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="cert, iter : ${alerts}" th:if="${iter.index < 6}" data-testid="alert-row">
+                            <td>
+                                <a class="fw-semibold text-decoration-none"
+                                   th:href="@{/certificates/{id}(id=${cert.id})}"
+                                   th:text="${cert.name}" data-testid="alert-name">Corporate Website</a>
+                                <div class="small text-muted" th:text="${cert.hostname}">www.example.com</div>
+                            </td>
+                            <td th:text="${cert.expiryDate}">2026-01-01</td>
+                            <td>
+                                <span th:replace="~{fragments/layout :: daysLeft(${cert.daysRemaining})}"></span>
+                            </td>
+                            <td>
+                                <span th:replace="~{fragments/layout :: statusBadge(${cert.status})}"></span>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(alerts)}">
+                            <td colspan="4">
+                                <div class="empty-state text-center py-5" data-testid="alerts-empty">
+                                    <p class="fw-semibold mb-1">No expiry alerts</p>
+                                    <p class="text-muted mb-0">Nothing is expired or inside the warning window.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Status breakdown</h2>
+                </div>
+                <div class="card-body">
+                    <div class="status-bar mb-3" role="img"
+                         th:attr="aria-label=|${counts.valid} valid, ${counts.expiringSoon} expiring soon, ${counts.expired} expired|">
+                        <span class="status-bar-valid" th:style="|width: ${counts.validPercent}%|"></span>
+                        <span class="status-bar-soon" th:style="|width: ${counts.expiringSoonPercent}%|"></span>
+                        <span class="status-bar-expired" th:style="|width: ${counts.expiredPercent}%|"></span>
+                    </div>
+                    <dl class="row mb-0 small">
+                        <dt class="col-7 fw-normal"><span class="legend-dot legend-valid"></span>Valid</dt>
+                        <dd class="col-5 text-end mb-1" th:text="${counts.valid}">4</dd>
+                        <dt class="col-7 fw-normal"><span class="legend-dot legend-soon"></span>Expiring soon</dt>
+                        <dd class="col-5 text-end mb-1" th:text="${counts.expiringSoon}">4</dd>
+                        <dt class="col-7 fw-normal"><span class="legend-dot legend-expired"></span>Expired</dt>
+                        <dd class="col-5 text-end mb-0" th:text="${counts.expired}">2</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Quick actions</h2>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                       th:href="@{/certificates}">
+                        Browse all certificates <span aria-hidden="true">&rarr;</span>
+                    </a>
+                    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                       th:href="@{/certificates(status='EXPIRING_SOON', sort='expiryDate', direction='asc')}">
+                        Review expiring soon <span aria-hidden="true">&rarr;</span>
+                    </a>
+                    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                       th:href="@{/exceptions}">
+                        Open exception view <span aria-hidden="true">&rarr;</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

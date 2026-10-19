@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+<body>
+<a class="visually-hidden-focusable skip-link" href="#main">Skip to content</a>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<main id="main" class="container-xl py-4">
+    <div class="mb-4">
+        <p class="text-uppercase text-muted small fw-semibold mb-1">
+            <span th:text="${certificateId == null ? 'New record' : 'Update record'}">New record</span>
+        </p>
+        <h1 class="h2 mb-1" th:text="${pageTitle}">Add certificate</h1>
+        <p class="text-muted mb-0" th:if="${certificateId == null}">
+            Register a certificate so its expiry date is tracked on the dashboard.
+        </p>
+        <p class="text-muted mb-0" th:if="${certificateId != null}" th:text="|Editing ${certificateName}.|">
+            Editing certificate.
+        </p>
+    </div>
+
+    <form class="card" th:action="${certificateId == null} ? @{/certificates} : @{/certificates/{id}(id=${certificateId})}"
+          th:object="${form}" method="post" novalidate data-testid="certificate-form">
+        <div class="card-body">
+            <div class="alert alert-danger" th:if="${#fields.hasAnyErrors()}" role="alert" data-testid="form-error-summary">
+                <strong>Please correct the highlighted fields.</strong>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-8">
+                    <label class="form-label" for="name">Certificate name <span class="text-danger" aria-hidden="true">*</span></label>
+                    <input type="text" class="form-control" id="name" th:field="*{name}"
+                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'"
+                           required maxlength="100" autocomplete="off" data-testid="field-name">
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"
+                         data-testid="error-name"></div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="form-label" for="type">Type <span class="text-danger" aria-hidden="true">*</span></label>
+                    <select class="form-select" id="type" th:field="*{type}"
+                            th:classappend="${#fields.hasErrors('type')} ? 'is-invalid'"
+                            required data-testid="field-type">
+                        <option value="" th:if="${form.type == null}">Select a type</option>
+                        <option th:each="t : ${types}" th:value="${t.name()}" th:text="${t.label}">TLS/SSL</option>
+                    </select>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('type')}" th:errors="*{type}"
+                         data-testid="error-type"></div>
+                </div>
+
+                <div class="col-12 col-md-8">
+                    <label class="form-label" for="hostname">Hostname / domain <span class="text-danger" aria-hidden="true">*</span></label>
+                    <input type="text" class="form-control" id="hostname" th:field="*{hostname}"
+                           th:classappend="${#fields.hasErrors('hostname')} ? 'is-invalid'"
+                           required maxlength="255" placeholder="www.example.com"
+                           autocomplete="off" data-testid="field-hostname">
+                    <div class="form-text">Wildcard names such as *.example.com are accepted. No protocol or path.</div>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('hostname')}" th:errors="*{hostname}"
+                         data-testid="error-hostname"></div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="form-label" for="environment">Environment <span class="text-danger" aria-hidden="true">*</span></label>
+                    <select class="form-select" id="environment" th:field="*{environment}"
+                            th:classappend="${#fields.hasErrors('environment')} ? 'is-invalid'"
+                            required data-testid="field-environment">
+                        <option value="" th:if="${form.environment == null}">Select an environment</option>
+                        <option th:each="e : ${environments}" th:value="${e.name()}" th:text="${e.label}">Production</option>
+                    </select>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('environment')}" th:errors="*{environment}"
+                         data-testid="error-environment"></div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label" for="issuer">Issuer</label>
+                    <input type="text" class="form-control" id="issuer" th:field="*{issuer}"
+                           th:classappend="${#fields.hasErrors('issuer')} ? 'is-invalid'"
+                           maxlength="100" placeholder="Let's Encrypt" autocomplete="off" data-testid="field-issuer">
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('issuer')}" th:errors="*{issuer}"
+                         data-testid="error-issuer"></div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label" for="ownerTeam">Owner / team <span class="text-danger" aria-hidden="true">*</span></label>
+                    <input type="text" class="form-control" id="ownerTeam" th:field="*{ownerTeam}"
+                           th:classappend="${#fields.hasErrors('ownerTeam')} ? 'is-invalid'"
+                           required maxlength="80" placeholder="Platform Engineering"
+                           autocomplete="off" data-testid="field-owner">
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('ownerTeam')}" th:errors="*{ownerTeam}"
+                         data-testid="error-owner"></div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label" for="issueDate">Issue date <span class="text-danger" aria-hidden="true">*</span></label>
+                    <input type="date" class="form-control" id="issueDate" th:field="*{issueDate}"
+                           th:classappend="${#fields.hasErrors('issueDate')} ? 'is-invalid'"
+                           required data-testid="field-issue-date">
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('issueDate')}" th:errors="*{issueDate}"
+                         data-testid="error-issue-date"></div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label" for="expiryDate">Expiry date <span class="text-danger" aria-hidden="true">*</span></label>
+                    <input type="date" class="form-control" id="expiryDate" th:field="*{expiryDate}"
+                           th:classappend="${#fields.hasErrors('expiryDate')} ? 'is-invalid'"
+                           required data-testid="field-expiry-date">
+                    <div class="form-text" th:text="|Expiry dates within ${warningThresholdDays} days are highlighted as expiring soon.|">
+                        Expiry dates within 30 days are highlighted as expiring soon.
+                    </div>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('expiryDate')}" th:errors="*{expiryDate}"
+                         data-testid="error-expiry-date"></div>
+                </div>
+
+                <div class="col-12">
+                    <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('expiryAfterIssue')}"
+                         th:errors="*{expiryAfterIssue}" data-testid="error-expiry-after-issue"></div>
+                    <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('issueDateNotInFuture')}"
+                         th:errors="*{issueDateNotInFuture}" data-testid="error-issue-date-future"></div>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label" for="notes">Notes</label>
+                    <textarea class="form-control" id="notes" th:field="*{notes}" rows="3" maxlength="1000"
+                              th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'"
+                              placeholder="Renewal owner, procurement reference, maintenance window..."
+                              data-testid="field-notes"></textarea>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"
+                         data-testid="error-notes"></div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer d-flex flex-wrap gap-2 justify-content-end">
+            <a class="btn btn-outline-secondary"
+               th:href="${certificateId == null} ? @{/certificates} : @{/certificates/{id}(id=${certificateId})}"
+               data-testid="form-cancel">Cancel</a>
+            <button type="submit" class="btn btn-primary" data-testid="submit-certificate"
+                    th:text="${certificateId == null ? 'Create certificate' : 'Save changes'}">Create certificate</button>
+        </div>
+    </form>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
