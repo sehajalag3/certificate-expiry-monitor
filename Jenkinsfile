@@ -28,12 +28,12 @@ pipeline {
         )
         booleanParam(
             name: 'BUILD_IMAGE',
-            defaultValue: false,
+            defaultValue: true,
             description: 'Build the Docker image'
         )
         booleanParam(
             name: 'PUSH_IMAGE',
-            defaultValue: false,
+            defaultValue: true,
             description: 'Push image; requires dockerhub-credentials in Jenkins'
         )
         string(
@@ -138,15 +138,22 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
+                    // Do NOT pipe the secret with cmd.exe `echo %VAR% |`. On Windows
+                    // cmd appends a trailing space before the pipe, and
+                    // `docker login --password-stdin` only strips CR/LF (not spaces),
+                    // so the space becomes part of the token and Docker Hub answers
+                    // "unauthorized: incorrect username or password". Pipe the
+                    // environment variable from PowerShell instead, and never
+                    // interpolate the secret into the command line or logs.
                     bat '''
                         @echo off
-                        echo %DOCKER_PASS% | docker login "%REGISTRY%" -u "%DOCKER_USER%" --password-stdin
+                        powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = $env:DOCKER_PASS; if ([string]::IsNullOrEmpty($p)) { Write-Host 'DIAG: DOCKER_PASS is empty'; exit 3 }; if ($p.Length -ne $p.Trim().Length) { Write-Host 'DIAG: credential has surrounding whitespace; the stored token may have been pasted with extra characters' }; $p | docker login $env:REGISTRY --username $env:DOCKER_USER --password-stdin; if ($LASTEXITCODE -ne 0) { Write-Host ('DIAG: %REGISTRY% rejected the credential (docker login exit code ' + $LASTEXITCODE + ')'); exit $LASTEXITCODE }; Write-Host 'DIAG: docker login succeeded'; exit 0"
                         if errorlevel 1 exit /b 1
-                        docker push "%REGISTRY%/%IMAGE_NAME%:%IMAGE_TAG%"
+                        powershell -NoProfile -ExecutionPolicy Bypass -Command "docker push ($env:REGISTRY + '/' + $env:IMAGE_NAME + ':' + $env:IMAGE_TAG); exit $LASTEXITCODE"
                         if errorlevel 1 exit /b 1
-                        docker push "%REGISTRY%/%IMAGE_NAME%:latest"
+                        powershell -NoProfile -ExecutionPolicy Bypass -Command "docker push ($env:REGISTRY + '/' + $env:IMAGE_NAME + ':latest'); exit $LASTEXITCODE"
                         if errorlevel 1 exit /b 1
-                        docker logout "%REGISTRY%"
+                        powershell -NoProfile -ExecutionPolicy Bypass -Command "docker logout $env:REGISTRY"
                     '''
                 }
             }

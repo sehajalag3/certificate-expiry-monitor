@@ -79,11 +79,40 @@ Executed on the local Jenkins 2.580.1 controller (Windows, `LocalSystem`):
 | #1 | checkout, 37 tests, package | `BUILD SUCCESS`, JAR archived |
 | #2 | + Selenium UI journeys | `Tests run: 5`, JUnit results published, JAR archived |
 | #3 | + Docker image | `Successfully tagged …:1.0.0-3` and `…:latest`, JAR archived |
+| #4 | manual `Build with Parameters` | `BUILD SUCCESS`; Push/Deploy skipped, so `pollSCM` registered and the job now saves an `SCMTrigger` |
+| #5, #6 | + Push image | `docker login … unauthorized: incorrect username or password` - see the root cause below |
 
-Push and Deploy stages were skipped (`PUSH_IMAGE=false`, empty `DEPLOY_HOST`), so their
-credential and orchestration wiring is still unverified. Green UI runs write no screenshots;
-the pipeline now checks that `target/selenium-screenshots` exists before archiving, which
-removes the "No artifacts found ... Configuration error?" warning seen in build #2.
+Green UI runs write no screenshots; the pipeline checks that `target/selenium-screenshots`
+exists before archiving, which removes the "No artifacts found ... Configuration error?"
+warning seen in build #2.
+
+### Push credential handling (root cause of builds #5 / #6)
+
+The original stage ran, under `bat` (cmd.exe):
+
+```bat
+echo %DOCKER_PASS% | docker login "%REGISTRY%" -u "%DOCKER_USER%" --password-stdin
+```
+
+On Windows, cmd.exe inserts a **trailing space** before the pipe, so the token on stdin is
+`<token> \r\n` (verified locally: `abc123` arrives as `abc123 \r\n`). `docker login
+--password-stdin` strips only terminal CR/LF/CR and treats the rest as opaque
+(`cli/command/registry/login.go`, `readSecretFromStdin`), so the space becomes part of the
+token and Docker Hub answers `unauthorized: incorrect username or password`. The credential
+itself is correct (username `sehaj0003`, one GLOBAL entry), which is why regenerating the
+token did not help.
+
+The stage now pipes the environment variable from PowerShell instead, without ever
+interpolating the secret into the command line or logs:
+
+```bat
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = $env:DOCKER_PASS; $p | docker login $env:REGISTRY --username $env:DOCKER_USER --password-stdin; exit $LASTEXITCODE"
+```
+
+The same invocation prints a DIAG line that distinguishes a **registry rejection**
+(`unauthorized …`, exit code from `docker login`) from a pipeline/parsing problem (an empty
+variable, a PowerShell/cmd error, or `'docker' is not recognized`), and warns (without
+printing the value) when the stored token has surrounding whitespace.
 
 Ansible was installed in WSL (Ubuntu 26.04, ansible-core 2.20.1):
 `ansible-playbook --syntax-check ansible/site.yml` passed and a `--check` run of the

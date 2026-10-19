@@ -101,10 +101,14 @@ Test breakdown (default run): 7 calculator + 10 service + 5 repository + 12 Mock
 | Jenkins build #1 (checkout, test, package) | console log shows `Tests run: 37`, `BUILD SUCCESS`, jar archived | **EXECUTED - PASS** |
 | Jenkins build #2 (+ Selenium) | `Tests run: 5, Failures: 0`; `junitResult.xml` published; jar archived | **EXECUTED - PASS** |
 | Jenkins build #3 (+ Docker) | `Successfully tagged sehaj0003/certificate-expiry-monitor:1.0.0-3` and `:latest`; jar archived | **EXECUTED - PASS** |
-| Empty screenshot archive warning | build #2/#3 logged "No artifacts found ... Configuration error?"; archive step now guarded by `fileExists(...)` | **FIXED (next build will confirm)** |
-| Jenkins credentials | `credentials.xml` absent -> `dockerhub-credentials` and `deploy-ssh-key` do not exist | **MISSING** |
-| GitHub trigger | job `<triggers/>` was empty; repository is public (`git ls-remote` works anonymously); `pollSCM('H/5 * * * *')` added to `Jenkinsfile` | **IMPLEMENTED, not registered yet** |
+| Empty screenshot archive warning | build #2/#3 logged "No artifacts found ... Configuration error?"; archive step now guarded by `fileExists(...)` | **FIXED** |
+| Jenkins credentials | `dockerhub-credentials` present (GLOBAL, username `sehaj0003`, single entry, access token); `deploy-ssh-key` still missing | **PARTIAL** |
+| GitHub trigger | job now stores an `SCMTrigger` (`scm-polling.log` shows active polling at `H/5 * * * *`) | **REGISTERED - PASS** |
+| Jenkins builds #4 | manual `Build with Parameters`: `BUILD SUCCESS`, Push/Deploy skipped | **EXECUTED - PASS** |
+| Jenkins builds #5 / #6 (push) | `docker login` failed: `unauthorized: incorrect username or password` even after a fresh token | **FAIL - root-caused** |
+| Push credential handling | cmd.exe `echo %DOCKER_PASS% |` appends a trailing space that `docker login --password-stdin` keeps; replaced with a PowerShell `$env:DOCKER_PASS | docker login ...` pipe | **FIXED** |
+| Auth diagnostic | exact new command run locally with dummy credentials reached Docker Hub and returned `unauthorized` + exit 1, clearly distinct from a syntax/parsing error | **EXECUTED - PASS** |
 | Ansible validation | `--syntax-check site.yml` OK; `--check` on `common` + `app` roles: `failed=0`; docker role fails in check mode because its apt repository is only simulated | **EXECUTED (partial)** |
 | Local deployment/recovery rehearsal | Jenkins image `1.0.0-3` on port 8082 + separate volume: health `UP`, created certificate survived restart, tag swap to `1.0.0` preserved data; container/volume removed | **EXECUTED - PASS** |
 | Remote deployment / rollback | no target host; inventory contains the placeholder `app.example.com` only | **NOT EXECUTED** |
-| Docker Hub push | not attempted - Jenkins credential missing; Hub shows only the older `1.0.0` tag | **BLOCKED** |
+| Docker Hub push | fixed command; real push waits for a `BUILD_IMAGE=true` + `PUSH_IMAGE=true` build (Jenkins API is 403 for anonymous, so the controller cannot be triggered here) | **FIXED, end-to-end pending** |

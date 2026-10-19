@@ -48,11 +48,16 @@ A global Maven tool is unnecessary, so a mismatched global Maven version cannot 
 | `dockerhub-credentials` | Username/password | image push stage |
 | `deploy-ssh-key` | SSH private key | Ansible deploy stage |
 
-**Verified 2026-10-20:** the Jenkins credential store is empty (`credentials.xml` does not
-exist), so both credentials still have to be created under *Manage Jenkins -> Credentials ->
-System -> Global credentials*. Until then, keep `PUSH_IMAGE=false` and `DEPLOY_HOST` empty.
+**Verified 2026-10-20:** `dockerhub-credentials` exists in the global store
+(`C:\ProgramData\Jenkins\.jenkins\credentials.xml`) as a `UsernamePasswordCredentialsImpl`:
+scope `GLOBAL`, username `sehaj0003` (matches the image namespace), password = a Docker Hub
+access token. The ID appears only once (no duplicate in another store/folder). `deploy-ssh-key`
+does **not** exist yet, so keep `DEPLOY_HOST` empty until it is created under
+*Manage Jenkins -> Credentials -> System -> Global credentials*.
 
-Never hard-code registry or server passwords in the `Jenkinsfile`.
+Never hard-code registry or server passwords in the `Jenkinsfile`. The push stage uses
+PowerShell (`$env:DOCKER_PASS | docker login ... --password-stdin`); see
+`docs/13-jenkins-pipeline.md` §13.6 for why the former `echo %DOCKER_PASS% |` form was broken.
 
 ## 12.5 Agent requirements
 
