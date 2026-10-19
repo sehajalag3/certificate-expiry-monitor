@@ -54,17 +54,23 @@ routes/config changed.
 
 ## 7. Merge
 
-Local-only flow (no remote configured on this project):
+GitHub flow (remote configured on this project):
 
 ```bash
+git push -u origin feature/<ticket-id>-<short-kebab>   # open a PR from the branch
+# ... CI green, review comments addressed ...
 git switch main
+git pull --ff-only
 git merge --no-ff feature/<ticket-id>-<short-kebab>
+git push origin main
 git branch -d feature/<ticket-id>-<short-kebab>
+git push origin --delete feature/<ticket-id>-<short-kebab>
 ./mvnw -B test                # final gate on main
 ```
 
-With a remote (GitHub flow): push the branch, open a PR using
-`.github/PULL_REQUEST_TEMPLATE.md`, address review comments, squash-merge.
+Offline fallback: run the same `merge --no-ff` locally without the push lines. Use
+`.github/PULL_REQUEST_TEMPLATE.md` for the PR description; the review checklist is in
+`11-collaboration.md` §11.3.
 
 ## 8. Hotfix variant
 
