@@ -28,12 +28,12 @@ pipeline {
         )
         booleanParam(
             name: 'BUILD_IMAGE',
-            defaultValue: true,
+            defaultValue: false,
             description: 'Build the Docker image'
         )
         booleanParam(
             name: 'PUSH_IMAGE',
-            defaultValue: true,
+            defaultValue: false,
             description: 'Push image; requires dockerhub-credentials in Jenkins'
         )
         string(
