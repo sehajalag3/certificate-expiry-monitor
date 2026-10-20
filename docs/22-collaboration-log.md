@@ -21,7 +21,7 @@ Remote: `https://github.com/sehajalag3/certificate-expiry-monitor.git` (`origin`
 
 | PR | Branch | Review | Merge |
 |----|--------|--------|-------|
-| #1 | `docs/final-evidence-and-ansible-drill` -> `main` | reviewed with `gh pr review` against the [`11-collaboration.md`](11-collaboration.md) checklist (diff, tests, docs, no secrets) | merged to `main` with `gh pr merge --merge`, then `.\mvnw.cmd -B test` re-run on `main` |
+| #1 | `docs/final-evidence-and-ansible-drill` -> `main` | diff reviewed against the [`11-collaboration.md`](11-collaboration.md) checklist and posted with `gh pr review --comment` (GitHub rejects `--approve` on your own PR) | merged to `main` with `gh pr merge --merge`, then `.\mvnw.cmd -B test` re-run on `main` |
 
 ## 22.2 Merge-conflict drill
 
