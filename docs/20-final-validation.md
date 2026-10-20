@@ -127,7 +127,7 @@ WSL distro, and the production inventory still points at the placeholder host.
 | 2 | Push a branch that must fail CI | branch `test/deliberate-failure` at `f198541` pushed; `git ls-remote --heads origin` lists it next to `main` | **EXECUTED - PASS** |
 | 3 | Prove the failure is real | `.\mvnw.cmd -B test "-Dtest=DeliberateFailureDrillTest"` -> `Tests run: 1, Failures: 1, Errors: 0`, `BUILD FAILURE`, exit code 1 | **EXECUTED - PASS** |
 | 4 | Jenkins job `Certificate-Expiry-Monitor-FailureDrill` on `test/deliberate-failure` | job exists under `C:\ProgramData\Jenkins\.jenkins\jobs\`; its `config.xml` shows `CpsScmFlowDefinition` -> Git -> `*/test/deliberate-failure`, `scriptPath=Jenkinsfile`, `<disabled>false` | **EXECUTED - job verified** |
-| 5 | First run of that job | `builds/` is empty and the job declares no `<triggers/>`, so it waits for a manual **Build**; Jenkins denies anonymous reads (HTTP 403) and no credential was supplied in this session | **PENDING - manual trigger needed** |
+| 5 | Failure-drill job executions | **build #1 FAILURE** (started by *Sehaj Alag* manually, `2026-10-20T09:53:37.686Z`, 71.5 s): `Tests run: 38, Failures: 1, Errors: 0, Skipped: 0` with `com.example.certmonitor.DeliberateFailureDrillTest.deliberateFailureDrill` -> `AssertionFailedError` at line 19, `ERROR: script returned exit code 1`, `Finished: FAILURE`; `Selenium UI Journeys`, `Package`, `Docker Image`, `Push Image`, `Deploy Container`, `Deploy with Ansible` each logged `skipped due to earlier failure(s)` (0 occurrences of `-DskipTests package`, 0 of `archiveArtifacts`) -> the unit-test gate really blocks packaging. Repair commit `b0e3241` on `test/deliberate-failure` replaces the intentionally false assertion with real assertions on the pipeline gate (unit-test stage declared once, before `Package`, running `mvnw.cmd -B clean test`), 39 tests green locally. **build #2 SUCCESS** (`Started by an SCM change`, i.e. the pipeline's own `pollSCM('H/5 * * * *')`, `2026-10-20T10:15:02.574Z`, 47.2 s, revision `b0e3241`, `Tests run: 39, Failures: 0, Errors: 0, Skipped: 0`, `Build 2 completed successfully.`, JUnit action `totalCount=39 failCount=0`). Both results read from `C:\ProgramData\Jenkins\.jenkins\jobs\Certificate-Expiry-Monitor-FailureDrill\builds\{1,2}` (`build.xml` + `log`) | **EXECUTED - PASS (1 red, 1 green)** |
 | 6 | Ansible root execution in WSL, no `NOPASSWD` | `wsl -d Ubuntu -u root -- id` -> `uid=0(root) gid=0(root)`; no sudoers file was created or edited | **EXECUTED - PASS** |
 | 7 | Isolated test environment | new `ansible/inventory/wsl-test.ini` (`localhost`, `ansible_connection=local`) + `ansible/inventory/wsl-test-vars.yml` (`app_home=/opt/certmon-wsl-drill`, `app_port=8090`); default inventory and role defaults untouched | **EXECUTED - PASS** |
 | 8 | Playbook: syntax check | `ansible-playbook -i inventory/wsl-test.ini site.yml --syntax-check` -> `playbook: site.yml`, exit 0 | **EXECUTED - PASS** |
@@ -149,10 +149,12 @@ WSL distro, and the production inventory still points at the placeholder host.
 1. **No remote host.** `ansible/inventory/hosts.ini` still holds the placeholder `app.example.com`;
    all five playbook runs used the isolated local WSL inventory. This session does **not** claim a
    remote deployment - only WSL was tested.
-2. **Jenkins failure-drill build.** The job is created and correctly pointed at
-   `test/deliberate-failure`, but it has never run: Jenkins has no anonymous read (HTTP 403 on
-   `/api/json`), the job declares no trigger, and no credential was available to this session.
-   Everything else about the drill is done (branch pushed, failure proven locally: exit code 1).
+2. **No Jenkins credential in this session.** Both password attempts (`sehajadmin`/`adminpass123`
+   and three variants) returned `HTTP 401 Unauthorized` on `/me/api/json`, so no build was ever
+   triggered by this session with stored credentials. Build #1 was pressed in the Jenkins UI and
+   build #2 was queued by the pipeline's own `pollSCM('H/5 * * * *')` after the fix was pushed;
+   both results were read from the Jenkins home on disk. The drill branch is still never merged
+   into `main`, which remains at 37 tests.
 3. **Windows -> WSL access.** `localhost:8090` and the WSL address `172.19.115.211:8090` are not
    reachable from Windows (`TcpTestSucceeded = False`, WSL NAT + Hyper-V firewall), so all health
    checks were taken from inside WSL.
