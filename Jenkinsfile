@@ -177,13 +177,31 @@ pipeline {
                 // Continuous deployment: replace the running container with the
                 // freshly built image, front it with Nginx (deploy/nginx/nginx.conf)
                 // and gate success on the health endpoint through the proxy.
+                //
+                // Why the standalone `docker-compose.exe` and not `docker compose`:
+                // the Compose CLI plugin is discovered through the *user* config dir
+                // (%DOCKER_CONFIG%\cli-plugins). The Jenkins service account has no
+                // such directory, so `docker compose ...` falls back to parsing the
+                // whole line as a root docker command and dies with
+                // `unknown shorthand flag: 'f' in -f` (exit 125). The standalone
+                // binary sits next to docker.exe on the machine PATH, so it resolves
+                // for every account. The file is existence-checked and parsed
+                // (`config --quiet`) before anything is deployed.
+                //
+                // The health body comes back as Byte[] (nginx answers
+                // application/json, which Windows PowerShell does not decode), so it
+                // is converted to text before the UP match; otherwise the gate can
+                // never pass even on HTTP 200.
                 bat '''
                     @echo off
                     where docker || exit /b 1
+                    where docker-compose || exit /b 1
                     set "IMAGE_REF=%REGISTRY%/%IMAGE_NAME%:%IMAGE_TAG%"
                     set "HTTP_PORT=%DEPLOY_PORT%"
-                    docker compose -f deploy/docker-compose.deploy.yml up -d --force-recreate || exit /b 1
-                    powershell -NoProfile -ExecutionPolicy Bypass -Command "$u='http://localhost:%DEPLOY_PORT%/actuator/health'; for($i=0;$i -lt 30;$i++){ try{ $r=Invoke-WebRequest -UseBasicParsing $u -TimeoutSec 3; if($r.StatusCode -eq 200 -and $r.Content -match 'UP'){ Write-Host 'DIAG: deployed container healthy behind Nginx'; exit 0 } }catch{}; Start-Sleep -Seconds 2 }; Write-Host 'DIAG: health check failed'; exit 1"
+                    if not exist "deploy/docker-compose.deploy.yml" (echo DIAG: compose file not found: deploy/docker-compose.deploy.yml & exit /b 1)
+                    docker-compose -f deploy/docker-compose.deploy.yml config --quiet || exit /b 1
+                    docker-compose -f deploy/docker-compose.deploy.yml up -d --force-recreate || exit /b 1
+                    powershell -NoProfile -ExecutionPolicy Bypass -Command "$u='http://localhost:%DEPLOY_PORT%/actuator/health'; for($i=0;$i -lt 30;$i++){ try{ $r=Invoke-WebRequest -UseBasicParsing $u -TimeoutSec 3; $b=$r.Content; if($b -isnot [string]){ $b=[Text.Encoding]::UTF8.GetString($b) }; if($r.StatusCode -eq 200 -and $b -match 'UP'){ Write-Host 'DIAG: deployed container healthy behind Nginx'; exit 0 } }catch{}; Start-Sleep -Seconds 2 }; Write-Host 'DIAG: health check failed'; exit 1"
                     if errorlevel 1 exit /b 1
                 '''
             }
