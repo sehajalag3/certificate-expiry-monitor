@@ -52,6 +52,11 @@ pipeline {
             description: 'SSH user@host; Linux agent required for Ansible'
         )
         booleanParam(
+            name: 'DEPLOY_ANSIBLE_WSL',
+            defaultValue: false,
+            description: 'Run the Ansible playbook against the isolated WSL test node (inventory/wsl-test.ini). Requires the executor account to be able to start the Ubuntu WSL distro; the LocalSystem Jenkins service cannot.'
+        )
+        booleanParam(
             name: 'DEPLOY_CONTAINER',
             defaultValue: false,
             description: 'Deploy a fresh app container behind Nginx on the agent (continuous deployment)'
@@ -209,27 +214,55 @@ pipeline {
 
         stage('Deploy with Ansible') {
             when {
-                expression {
-                    isUnix() && params.DEPLOY_HOST?.trim()
+                anyOf {
+                    // Existing path (unchanged): Linux agent + SSH key + real inventory.
+                    expression { isUnix() && params.DEPLOY_HOST?.trim() }
+                    // Windows path: run the isolated WSL drill inventory from this
+                    // executor.
+                    expression { !isUnix() && params.DEPLOY_ANSIBLE_WSL }
                 }
             }
             steps {
-                withCredentials([
-                    sshUserPrivateKey(
-                        credentialsId: 'deploy-ssh-key',
-                        keyFileVariable: 'SSH_KEY',
-                        usernameVariable: 'SSH_USER'
-                    )
-                ]) {
-                    sh '''
-                        ANSIBLE_HOST_KEY_CHECKING=False \
-                        ANSIBLE_PRIVATE_KEY_FILE="$SSH_KEY" \
-                        ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml \
-                          -e "app_user=$SSH_USER" \
-                          -e "app_host=$DEPLOY_HOST" \
-                          -e "image=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" \
-                          -e "deploy=true"
-                    '''
+                script {
+                    if (!isUnix() && params.DEPLOY_ANSIBLE_WSL) {
+                        // WSL distributions are registered per Windows user under
+                        // HKCU\Software\Microsoft\Windows\CurrentVersion\Lxss. The
+                        // Jenkins controller runs as LocalSystem, whose registry hive
+                        // lists no distribution, so `wsl.exe` cannot start Ubuntu for
+                        // the service account. The probes below turn that into an
+                        // explicit DIAG failure instead of a silent skip, and nothing
+                        // about the service account or WSL registration is modified
+                        // here. Safe options: attach a Jenkins agent that runs as the
+                        // Windows user owning the distro, or use a Linux agent with the
+                        // DEPLOY_HOST path above.
+                        bat '''
+                            @echo off
+                            where wsl || (echo DIAG: wsl.exe is not on PATH for this executor & exit /b 1)
+                            wsl -d Ubuntu -u root -- true || (echo DIAG: this Windows account cannot start the Ubuntu WSL distro. WSL distributions are registered per Windows user; the Jenkins service account has none. Run the agent as the user who owns the distro, or use a Linux agent with the DEPLOY_HOST path. & exit /b 1)
+                            wsl -d Ubuntu -u root -- bash -lc "command -v ansible-playbook" || (echo DIAG: ansible-playbook is not installed inside the Ubuntu WSL distro & exit /b 1)
+                            powershell -NoProfile -ExecutionPolicy Bypass -Command "$p=$env:WORKSPACE; $ws='/mnt/' + $p[0].ToString().ToLower() + ($p.Substring(2) -replace '\\','/') + '/ansible'; Write-Host ('DIAG: WSL ansible dir: ' + $ws); $cmd='cd ' + $ws + ' && ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory/wsl-test.ini site.yml -e @inventory/wsl-test-vars.yml -e deploy=true'; wsl -d Ubuntu -u root -- bash -lc $cmd; exit $LASTEXITCODE"
+                            if errorlevel 1 exit /b 1
+                        '''
+                    } else {
+                        // Existing Linux-agent / remote-host path, unchanged.
+                        withCredentials([
+                            sshUserPrivateKey(
+                                credentialsId: 'deploy-ssh-key',
+                                keyFileVariable: 'SSH_KEY',
+                                usernameVariable: 'SSH_USER'
+                            )
+                        ]) {
+                            sh '''
+                                ANSIBLE_HOST_KEY_CHECKING=False \
+                                ANSIBLE_PRIVATE_KEY_FILE="$SSH_KEY" \
+                                ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml \
+                                  -e "app_user=$SSH_USER" \
+                                  -e "app_host=$DEPLOY_HOST" \
+                                  -e "image=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" \
+                                  -e "deploy=true"
+                            '''
+                        }
+                    }
                 }
             }
         }
