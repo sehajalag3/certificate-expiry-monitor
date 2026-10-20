@@ -14,6 +14,14 @@ Remote: `https://github.com/sehajalag3/certificate-expiry-monitor.git` (`origin`
 | 1 | `docs/diagrams-and-workflow` | docs | Kanban board, DevOps lifecycle and use-case diagrams; remote workflow docs | merged to `main` with `--no-ff` |
 | 2 | `docs/sprint-handover` | docs | handover notes drill | merged after conflict resolution |
 | 3 | `docs/review-sla` | docs | review-SLA drill | merged after conflict resolution |
+| 4 | `test/deliberate-failure` | test | `DeliberateFailureDrillTest` - one intentionally failing test for the Jenkins failure-drill job | **never merged** (by design); pushed so the failure-drill pipeline can go red |
+| 5 | `docs/final-evidence-and-ansible-drill` | docs + ansible | WSL Ansible drill evidence, 3 Ansible defect fixes, isolated test inventory, final task checklist | see [20-final-validation.md](20-final-validation.md) section 9 |
+
+### Pull requests
+
+| PR | Branch | Review | Merge |
+|----|--------|--------|-------|
+| #1 | `docs/final-evidence-and-ansible-drill` -> `main` | reviewed with `gh pr review` against the [`11-collaboration.md`](11-collaboration.md) checklist (diff, tests, docs, no secrets) | merged to `main` with `gh pr merge --merge`, then `.\mvnw.cmd -B test` re-run on `main` |
 
 ## 22.2 Merge-conflict drill
 

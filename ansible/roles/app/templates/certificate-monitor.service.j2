@@ -13,7 +13,7 @@ EnvironmentFile={{ app_home }}/app.env
 ExecStartPre=-/usr/bin/docker rm -f certificate-monitor
 ExecStart=/usr/bin/docker run --name certificate-monitor \
   --env-file {{ app_home }}/app.env \
-  --publish {{ app_port }}:8080 \
+  --publish {{ app_port }}:{{ app_container_port }} \
   --volume {{ app_home }}/data:/app/data \
   --restart unless-stopped \
   {{ app_image }}
