@@ -1,0 +1,12 @@
+---
+# Extra vars for the isolated WSL test node (see inventory/wsl-test.ini).
+# Everything is namespaced so a drill run cannot touch a real deployment:
+#   - app_home  lives under /opt/certmon-wsl-drill
+#   - app_port  8090 (real deployments use 8080)
+#   - image     certificate-expiry-monitor:1.0.0 (retagged from the image
+#               Jenkins pushed to Docker Hub, pulled anonymously)
+app_home: /opt/certmon-wsl-drill
+app_port: 8090
+app_image: certificate-expiry-monitor:1.0.0
+warning_threshold_days: 30
+demo_data_enabled: true

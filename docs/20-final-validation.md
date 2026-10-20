@@ -114,3 +114,50 @@ Test breakdown (default run): 7 calculator + 10 service + 5 repository + 12 Mock
 | Local deployment/recovery rehearsal | Jenkins image `1.0.0-3` on port 8082 + separate volume: health `UP`, created certificate survived restart, tag swap to `1.0.0` preserved data; container/volume removed | **EXECUTED - PASS** |
 | Remote deployment / rollback | no target host; inventory contains the placeholder `app.example.com` only | **NOT EXECUTED** |
 | Docker Hub push | verified end-to-end by build #8 via the registered SCM trigger; `sehaj0003/certificate-expiry-monitor:1.0.0-8` and `:latest` are live on Docker Hub | **EXECUTED - PASS** |
+
+## 9. Final task checklist - 2026-10-20 (second session)
+
+Every row below was executed in this repository, and the evidence column names the artefact that
+can be re-checked. **Nothing here is a remote deployment** - the only Linux node used is the local
+WSL distro, and the production inventory still points at the placeholder host.
+
+| # | Task | Evidence | Status |
+|---|------|----------|--------|
+| 1 | GitHub CLI authenticated | `gh auth status` -> `Logged in to github.com account sehajalag3`, scopes `gist, read:org, repo, workflow` | **EXECUTED - PASS** |
+| 2 | Push a branch that must fail CI | branch `test/deliberate-failure` at `f198541` pushed; `git ls-remote --heads origin` lists it next to `main` | **EXECUTED - PASS** |
+| 3 | Prove the failure is real | `.\mvnw.cmd -B test "-Dtest=DeliberateFailureDrillTest"` -> `Tests run: 1, Failures: 1, Errors: 0`, `BUILD FAILURE`, exit code 1 | **EXECUTED - PASS** |
+| 4 | Jenkins job `Certificate-Expiry-Monitor-FailureDrill` on `test/deliberate-failure` | job exists under `C:\ProgramData\Jenkins\.jenkins\jobs\`; its `config.xml` shows `CpsScmFlowDefinition` -> Git -> `*/test/deliberate-failure`, `scriptPath=Jenkinsfile`, `<disabled>false` | **EXECUTED - job verified** |
+| 5 | First run of that job | `builds/` is empty and the job declares no `<triggers/>`, so it waits for a manual **Build**; Jenkins denies anonymous reads (HTTP 403) and no credential was supplied in this session | **PENDING - manual trigger needed** |
+| 6 | Ansible root execution in WSL, no `NOPASSWD` | `wsl -d Ubuntu -u root -- id` -> `uid=0(root) gid=0(root)`; no sudoers file was created or edited | **EXECUTED - PASS** |
+| 7 | Isolated test environment | new `ansible/inventory/wsl-test.ini` (`localhost`, `ansible_connection=local`) + `ansible/inventory/wsl-test-vars.yml` (`app_home=/opt/certmon-wsl-drill`, `app_port=8090`); default inventory and role defaults untouched | **EXECUTED - PASS** |
+| 8 | Playbook: syntax check | `ansible-playbook -i inventory/wsl-test.ini site.yml --syntax-check` -> `playbook: site.yml`, exit 0 | **EXECUTED - PASS** |
+| 9 | Playbook run 1 - provisioning | recap `ok=16 changed=11 failed=0 skipped=2` (packages, Docker CE, app user, dirs, unit) | **EXECUTED - PASS** |
+| 10 | Playbook run 2 - first deploy | recap `ok=16 changed=1 failed=1`; health gate failed with `[Errno 104] Connection reset by peer` on `http://127.0.0.1:8090/actuator/health` -> defect 1 found | **EXECUTED - FAIL (defect found)** |
+| 11 | Playbook run 3 - deploy after the fix | recap `ok=17 changed=2 failed=0`; health `{"status":"UP","groups":["liveness","readiness"]}` | **EXECUTED - PASS** |
+| 12 | Playbook run 4 - same command again | recap `ok=17 changed=0 failed=0` -> **idempotent** | **EXECUTED - PASS** |
+| 13 | Application health on the WSL node | `/actuator/health` UP, `/` and `/certificates` HTTP 200 with **10 certificate rows**, container `Up (healthy) 0.0.0.0:8090->8080/tcp` | **EXECUTED - PASS** |
+| 14 | Rollback without deleting data | unit disabled + unit file removed + `docker rm -f`; then `PASS: app data marker preserved`, `PASS: /root canary preserved`, `PASS: /opt canary preserved`, `PASS: unrelated app data preserved`, port closed | **EXECUTED - PASS** |
+| 15 | Recovery with the same playbook | run 5 recap `ok=18 changed=2 failed=0`; health `UP`, still **10 rows**, marker md5 `854384fb431220a85a7aed5f8f7aafdc` unchanged -> rollback removed deployment objects, never data | **EXECUTED - PASS** |
+| 16 | Ansible defects found and fixed | 3 fixes (port mapping `app_container_port`, removed `yaml` callback, `ansible_facts` deprecation) - detail in [`18-ansible-provisioning.md`](18-ansible-provisioning.md) 18.6; validated by runs 3/4/5 | **FIXED - PASS** |
+| 17 | GitHub pull request + code review | PR **#1** `docs/final-evidence-and-ansible-drill` -> `main`, opened with the PR template, diff reviewed against the [`11-collaboration.md`](11-collaboration.md) checklist and posted with `gh pr review --comment` (GitHub rejects self-approval, so the approving review cannot come from the author account) | **EXECUTED - PASS** |
+| 18 | Merge without breaking `main` | `gh pr merge --merge` (merge commit, matching `main` history style) | **EXECUTED - PASS** |
+| 19 | `main` green after the merge | `.\mvnw.cmd -B test` re-run on `main` -> `Tests run: 37, Failures: 0, Errors: 0`, `BUILD SUCCESS` | **EXECUTED - PASS** |
+| 20 | Documentation of the drill | [`18-ansible-provisioning.md`](18-ansible-provisioning.md) 18.6 (runs, defects, limits), [`22-collaboration-log.md`](22-collaboration-log.md) (branch + PR log), this section | **EXECUTED - PASS** |
+
+### Still not verified (honest list, updated)
+
+1. **No remote host.** `ansible/inventory/hosts.ini` still holds the placeholder `app.example.com`;
+   all five playbook runs used the isolated local WSL inventory. This session does **not** claim a
+   remote deployment - only WSL was tested.
+2. **Jenkins failure-drill build.** The job is created and correctly pointed at
+   `test/deliberate-failure`, but it has never run: Jenkins has no anonymous read (HTTP 403 on
+   `/api/json`), the job declares no trigger, and no credential was available to this session.
+   Everything else about the drill is done (branch pushed, failure proven locally: exit code 1).
+3. **Windows -> WSL access.** `localhost:8090` and the WSL address `172.19.115.211:8090` are not
+   reachable from Windows (`TcpTestSucceeded = False`, WSL NAT + Hyper-V firewall), so all health
+   checks were taken from inside WSL.
+4. **WSL lifecycle.** WSL tears down the distro's userspace between command sessions (observed:
+   PID 1 start time equals the start of the next `wsl` command), so the deployed container only
+   runs while a session is active; the unit is enabled and starts again at the next session.
+5. PostgreSQL profile, image registry beyond Docker Hub, and a provisioned server remain
+   unverified exactly as in section 5.
